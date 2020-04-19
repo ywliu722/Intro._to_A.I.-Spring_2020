@@ -3,9 +3,9 @@
 //20200419 14:30 PM 完成invalidAssignment(), both(), LCV()
 //20200419 14:45 PM 完成forwardChecking()
 //20200419 14:50 PM 完成全部(?
-#include <iostream>
-#include <vector>
-#include <algorithm>
+#include <iostream>     //for I/O
+#include <vector>       //for資料儲存
+#include <algorithm>    //for domain拿出順序(sort())
 
 #define ROW 6
 #define COLUMN 6
@@ -118,6 +118,10 @@ bool isComplete(vector<node> variable){
                 return false;
             }
         }
+    }
+    //就算說local constrants都符合 但還有一個global constriant要檢查
+    if(counting!=MINE){
+        return false;
     }
     return true;
 }
@@ -476,6 +480,7 @@ void searching(vector<node> variable, vector<dom> domain, int &counting, bool &f
                     tmp_domain.push_back(domain[j]);
                 }
             }
+            invalidAssignment(variable, tmp_domain);
             counting++;     //走過的node+1
             //如果還有還沒被assign的variable就近到下一層
             if(tmp_domain.size()>0){
