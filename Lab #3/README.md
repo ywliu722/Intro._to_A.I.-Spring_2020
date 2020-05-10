@@ -1,1 +1,1 @@
-You can modify the size of the mine map and the number of mines easily by change the value of "define" in the first few line of the code.
+You can modify the size of the mine map and the number of mines easily by change the value of "define" in the first few line of the code. And I can't find a better way to generate new clauses without using so many loops in GenerateClause().
