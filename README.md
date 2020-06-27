@@ -5,4 +5,4 @@ Lab #2-Minesweeper using backtracking search with MRV, Degree Heuristic, LCV and
 
 Lab #3-Minesweeper using propositional logic with the rule of resolution
 
-Lab #4-Supervised learning using random forests
+Lab #4-Supervised learning using random forests and Iris Dataset
