@@ -17,7 +17,7 @@
 #include <algorithm>    //for sort()
 
 #define TRANING_RATIO 0.8   //the ratio of training data
-#define SELECT_RATIO 0.6    //the ratio of selected data when build up a tree
+#define SELECT_RATIO 0.9    //the ratio of selected data when build up a tree
 #define TREE_HEIGHT 5       //maximum height of the trees
 #define TREE_NUMBER 10      //number of trees in the forest
 #define EXPERIMENT_TIME 30  //how many times we do the experiment
@@ -397,6 +397,7 @@ float Validation(vector<tree> &forest, vector<Sample> &validation_data){
 void Output(float validation_error){
     cout << endl;
     cout << "Training Ratio: " << TRANING_RATIO << endl;
+    cout << "Select Ratio: " << SELECT_RATIO << endl;
     cout << "Maximum Tree Height: " << TREE_HEIGHT << endl;
     cout << "Number of Tree in Forest: " << TREE_NUMBER << endl;
     cout << "Experiment Time: " << EXPERIMENT_TIME << endl;
