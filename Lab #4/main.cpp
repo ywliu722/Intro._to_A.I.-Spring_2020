@@ -4,26 +4,29 @@
 //20200626 11:14 PM 完成Validation()
 //20200627 12:43 AM 完成BuildForest(), tree class大多函數
 //20200627 11:37 PM 完成GiniImpurity(), 成功輸出(要試一下更高的樹為什麼跑不出來)
+//20200628 09:43 PM 完成debug以及解決跑不出來的問題(因為沒有處理分出來的是空的子集合)
+
 #include <iostream>
-#include <iomanip>  //for Output()
-#include <fstream>  //for data input
-#include <cstdlib>  //for rand()
-#include <ctime>    //for rand()
+#include <iomanip>      //for Output()
+#include <fstream>      //for data input
+#include <cstdlib>      //for rand()
+#include <ctime>        //for rand()
 #include <vector>
-#include <queue>    //for BFS
+#include <queue>        //for BFS
 #include <string>
-#include <algorithm>
+#include <algorithm>    //for sort()
 
 #define TRANING_RATIO 0.8   //the ratio of training data
 #define SELECT_RATIO 0.6    //the ratio of selected data when build up a tree
-#define TREE_HEIGHT 2       //maximum height of the trees
-#define TREE_NUMBER 10       //number of trees in the forest
+#define TREE_HEIGHT 5       //maximum height of the trees
+#define TREE_NUMBER 10      //number of trees in the forest
 #define EXPERIMENT_TIME 30  //how many times we do the experiment
 #define OUTPUT_NUMBER 3     //number of expected output
 
 using namespace std;
 
-int current_attribute;
+int current_attribute;      //used in the sort() comparison function
+
 //class of each sample
 class Sample{
 public:
@@ -47,13 +50,16 @@ public:
 class tree{
 public:
     //data
-    node *root;
-    vector<Sample> selected_data;
+    node *root;                     //store the root node
+    vector<Sample> selected_data;   //store the selected data for this tree
 
     //function
+
+    //for sort()
     static bool comparison(Sample &a , Sample &b){
         return a.attribute[current_attribute] < b.attribute[current_attribute];
     }
+    //randomly select data from training data to train the tree(repeat data is allowed)
     void Select_data(vector<Sample> &training_data){
         srand(time(NULL));
         int select_size = training_data.size() * SELECT_RATIO;
@@ -63,6 +69,7 @@ public:
             select_size--;
         }
     }
+    //find the Gini's Impurity of current attribute
     float Gini_Impurity(vector<Sample> &split_data, int attribute, float &min_threshold){
         current_attribute = attribute;
         sort(split_data.begin(), split_data.end(), comparison);
@@ -90,6 +97,9 @@ public:
             float G_left = 1 - ((left_0 * left_0) + (left_1 * left_1) + (left_2 * left_2));
             float G_right = 1 - ((right_0 * right_0) + (right_1 * right_1) + (right_2 * right_2));
             float current_purity = (float(left)/float(left+right)) * G_left + (float(right)/float(left+right)) * G_right;
+            if(!(current_purity>=0 && current_purity<=1)){
+                continue;
+            }
             if(current_purity<min_purity){
                 min_purity = current_purity;
                 min_threshold = current_threshold;
@@ -97,6 +107,7 @@ public:
         }
         return min_purity;
     }
+    //split the data into two subset to the next depth
     void NodeSplit(vector<Sample> &current, vector<Sample> &left, vector<Sample> &right, int attribute, float threshold){
         int left_size = 0, right_size = 0;
         for (int i = 0; i < current.size();i++){
@@ -121,20 +132,26 @@ public:
             }
         }
     }
+    //build up the tree using BFS
     void BuildTree(){
-        queue<node*> node_queue;
-        queue<vector<Sample>> sample_queue;
-        node *tmp = new node;
+        queue<node*> node_queue;            //frontier of BFS
+        queue<vector<Sample>> sample_queue; //frontier of BFS
+
+        node *tmp = new node;   //the root node
         tmp->depth = 0;
         root = tmp;
+
+        //push the node and the data into frontier
         node_queue.push(tmp);
         sample_queue.push(selected_data);
+
         while(!node_queue.empty()){
-            //get the current node's information
+            //get the current node's information and expand it
             node *current_node = node_queue.front();
             node_queue.pop();
             vector<Sample> current_data = sample_queue.front();
             sample_queue.pop();
+
             //if the current node reach the maximum height
             if(current_node->depth==TREE_HEIGHT){
                 current_node->attribute = -1;
@@ -167,6 +184,12 @@ public:
                     min_threshold = current_threshold;
                 }
             }
+            //if the min_impurity==0 means that the current datas all have same output
+            if(min_impurity==0){
+                current_node->attribute = -1;
+                current_node->value = current_data[0].output_num;
+                continue;
+            }
             current_node->attribute = min_attribute;
             current_node->threshold = min_threshold;
 
@@ -177,13 +200,28 @@ public:
             right_child->depth = current_node->depth + 1;
             current_node->left_child = left_child;
             current_node->right_child = right_child;
-            node_queue.push(left_child);
-            node_queue.push(right_child);
+            
             
             //split the data into two subset
             vector<Sample> left_data;
             vector<Sample> right_data;
             NodeSplit(current_data, left_data, right_data, current_node->attribute, current_node->threshold);
+
+            //if one of the node's data has no data, then just push another one into frontier
+            if(left_data.size()==0){
+                node_queue.push(right_child);
+                sample_queue.push(right_data);
+                continue;
+            }
+            if(right_data.size()==0){
+                node_queue.push(left_child);
+                sample_queue.push(left_data);
+                continue;
+            }
+
+            //push the child node into frontier
+            node_queue.push(left_child);
+            node_queue.push(right_child);
             sample_queue.push(left_data);
             sample_queue.push(right_data);
             current_data.clear();
@@ -309,10 +347,10 @@ void TrainingDataSplit(vector<Sample> &origin, vector<Sample> &sub1, vector<Samp
 void BuildForest(vector<tree> &forest, vector<Sample> &training_data){
     forest.resize(TREE_NUMBER);
     for (int i = 0; i < TREE_NUMBER;i++){
-        tree current;
-        current.Select_data(training_data);
-        current.BuildTree();
-        forest[i] = current;
+        tree current;                       //declear new tree object
+        current.Select_data(training_data); //randomly select data from split training data
+        current.BuildTree();                //build up the tree
+        forest[i] = current;                //store the tree object into forest
     }
 }
 
